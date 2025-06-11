@@ -16,10 +16,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import "../styles/attemptQuiz.css";
 
-// Support both local and production environments
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-  ? "http://localhost:5000/api" 
-  : "http://localhost:5000/api";
+// Using local development server
+const API_URL = "http://localhost:5000/api";
 
 // Format time in seconds to MM:SS format
 const formatTime = (seconds) => {

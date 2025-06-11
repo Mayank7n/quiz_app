@@ -6,10 +6,8 @@ import { User, Award, Clock, BarChart2, CheckCircle, XCircle, Edit, LogOut, Book
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
-// Support both local and production environments
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-  ? "http://localhost:5000/api" 
-  : "http://localhost:5000/api";
+// Using local development server
+const API_URL = "http://localhost:5000/api";
 
 const popVariants = {
   hidden: { opacity: 0, y: 20 },

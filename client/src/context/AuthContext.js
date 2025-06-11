@@ -2,9 +2,8 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 // Support both local and production environments
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-  ? "http://localhost:5000" 
-  : "http://localhost:5000";
+// Using local development server
+const API_URL = "http://localhost:5000";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

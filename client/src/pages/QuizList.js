@@ -5,10 +5,8 @@ import { Container, Row, Col, Spinner, Alert, Button } from "react-bootstrap";
 import { BookOpen, Clock, Award } from "lucide-react";
 import "../styles/quizList.css";
 
-// Support both local and production environments
-const API_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-  ? "http://localhost:5000/api" 
-  : "http://localhost:5000/api";
+// Using local development server
+const API_URL = "http://localhost:5000/api";
 
 const QuizList = () => {
   const { user } = useAuth();
@@ -298,17 +296,8 @@ const QuizList = () => {
                   <div className="mt-3 pt-2 border-top">
                     <div className="d-flex justify-content-between align-items-center mb-2">
                       <span className="text-muted small">Attempted</span>
-                      {quiz.terminated ? (
-                        <span className="badge bg-danger">Terminated</span>
-                      ) : (
-                        <span className="badge bg-success">Completed</span>
-                      )}
+                      <span className="badge bg-success">Completed</span>
                     </div>
-                    {quiz.terminated && (
-                      <div className="quiz-message small text-danger">
-                        Quiz was terminated due to rule violation
-                      </div>
-                    )}
                   </div>
                 )}
                 
@@ -316,15 +305,9 @@ const QuizList = () => {
                   variant={quiz.attempted ? 'outline-primary' : 'primary'}
                   className="w-100 py-2 quiz-action-btn mt-4"
                   style={{
-                    background: quiz.attempted ? 
-                      (quiz.terminated ? 'transparent' : 'transparent') : 
-                      'linear-gradient(45deg, #4e54c8, #8f94fb)',
-                    border: quiz.attempted ? 
-                      (quiz.terminated ? '2px solid #dc3545' : '2px solid #4e54c8') : 
-                      'none',
-                    color: quiz.attempted ? 
-                      (quiz.terminated ? '#dc3545' : '#4e54c8') : 
-                      'white',
+                    background: quiz.attempted ? 'transparent' : 'linear-gradient(45deg, #4e54c8, #8f94fb)',
+                    border: quiz.attempted ? '2px solid #4e54c8' : 'none',
+                    color: quiz.attempted ? '#4e54c8' : 'white',
                     fontWeight: '600',
                     borderRadius: '8px',
                     transition: 'all 0.3s ease',
@@ -343,9 +326,7 @@ const QuizList = () => {
                     handleAttemptQuiz(quiz._id);
                   }}
                 >
-                  {quiz.attempted ? 
-                    (quiz.terminated ? '✕ Quiz Terminated' : '✓ Quiz Completed') : 
-                    '▶ Start Quiz'}
+                  {quiz.attempted ? '✓ Quiz Completed' : '▶ Start Quiz'}
                 </Button>
               </div>
             </Col>

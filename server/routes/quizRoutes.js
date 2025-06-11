@@ -38,26 +38,17 @@ router.get("/all", verifyToken, async (req, res) => {
     const quizzes = await Quiz.find({}).sort({ createdAt: -1 });
     
     // Find all quiz attempts by the current user
-    const attempts = await QuizResult.find({ user: req.user.id }).select('quiz terminated');
+    const attempts = await QuizResult.find({ user: req.user.id }).select('quiz');
     const attemptedQuizIds = new Set(attempts.map(attempt => attempt.quiz.toString()));
     
-    // Get terminated quizzes
-    const terminatedQuizIds = new Set(
-      attempts
-        .filter(attempt => attempt.terminated)
-        .map(attempt => attempt.quiz.toString())
-    );
-    
-    // Get user's terminated quizzes from User model as well (for backward compatibility)
+    // Get user's terminated quizzes
     const User = require('../models/User');
     const user = await User.findById(req.user.id);
-    if (user && user.terminatedQuizzes && user.terminatedQuizzes.length > 0) {
-      user.terminatedQuizzes.forEach(quizId => terminatedQuizIds.add(quizId.toString()));
-    }
+    const terminatedQuizIds = user.terminatedQuizzes ? user.terminatedQuizzes.map(id => id.toString()) : [];
     
-    // Add attempted status to each quiz and filter out terminated quizzes
+    // Filter out terminated quizzes and add attempted status to each quiz
     const quizzesWithStatus = quizzes
-      .filter(quiz => !terminatedQuizIds.has(quiz._id.toString())) // Filter out terminated quizzes
+      .filter(quiz => !terminatedQuizIds.includes(quiz._id.toString()))
       .map(quiz => ({
         ...quiz.toObject(),
         attempted: attemptedQuizIds.has(quiz._id.toString())
@@ -79,30 +70,14 @@ router.get("/attempted", verifyToken, async (req, res) => {
       .populate('quiz', 'title questions') // Populate quiz details
       .sort({ completedAt: -1 });
       
-    // Get user's terminated quizzes from User model (for backward compatibility)
-    const User = require('../models/User');
-    const user = await User.findById(req.user.id);
-    const userTerminatedQuizIds = new Set();
-    
-    if (user && user.terminatedQuizzes && user.terminatedQuizzes.length > 0) {
-      user.terminatedQuizzes.forEach(quizId => userTerminatedQuizIds.add(quizId.toString()));
-    }
-    
     // Format the response
     const attemptedQuizzes = results
       .filter(result => result.quiz) // Only include results with valid quizzes
-      .map(result => {
-        // Check if quiz is terminated either in QuizResult or User model
-        const isTerminated = result.terminated || 
-                           userTerminatedQuizIds.has(result.quiz._id.toString());
-        
-        return {
-          quiz: result.quiz,
-          score: result.score,
-          completedAt: result.completedAt,
-          terminated: isTerminated
-        };
-      });
+      .map(result => ({
+        quiz: result.quiz,
+        score: result.score,
+        completedAt: result.completedAt
+      }));
       
     res.json(attemptedQuizzes);
   } catch (error) {
@@ -202,7 +177,7 @@ router.post('/terminate/:quizId', verifyToken, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Add the quiz to user's terminated quizzes (for backward compatibility)
+    // Add the quiz to user's terminated quizzes
     if (!user.terminatedQuizzes) {
       user.terminatedQuizzes = [];
     }
@@ -212,32 +187,6 @@ router.post('/terminate/:quizId', verifyToken, async (req, res) => {
       await user.save();
     }
     
-    // Create or update a QuizResult entry with terminated status
-    const existingResult = await QuizResult.findOne({ 
-      user: req.user.id, 
-      quiz: req.params.quizId 
-    });
-    
-    if (existingResult) {
-      // Update existing result
-      existingResult.terminated = true;
-      existingResult.terminatedAt = new Date();
-      existingResult.terminatedBy = req.user.id; // Self-terminated
-      await existingResult.save();
-    } else {
-      // Create new result with terminated status
-      const quizResult = new QuizResult({
-        user: req.user.id,
-        quiz: req.params.quizId,
-        answers: [],
-        score: 0,
-        terminated: true,
-        terminatedAt: new Date(),
-        terminatedBy: req.user.id // Self-terminated
-      });
-      await quizResult.save();
-    }
-    
     res.json({ message: 'Quiz terminated for user', userId: user._id });
   } catch (error) {
     console.error('Terminate Quiz Error:', error);
@@ -245,8 +194,29 @@ router.post('/terminate/:quizId', verifyToken, async (req, res) => {
   }
 });
 
-// This is a duplicate route that can be removed
-// The first /attempted route above handles this functionality now
+// Get attempted quizzes with scores
+// GET /api/quiz/attempted
+router.get("/attempted", verifyToken, async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    const terminatedQuizIds = user.terminatedQuizzes.map(id => id.toString());
+    const results = await QuizResult.find({ user: req.user.id })
+      .populate('quiz', 'title questions') // Populate quiz details
+      .sort({ completedAt: -1 });
+    const attemptedQuizzes = results
+      .filter(result => result.quiz && !terminatedQuizIds.includes(result.quiz._id.toString()))
+      .map(result => ({
+        quiz: result.quiz,
+        score: result.score,
+        completedAt: result.completedAt
+      }));
+    res.json(attemptedQuizzes);
+  } catch (error) {
+    console.error("Get Attempted Quizzes Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // Leaderboard for a quiz
 // GET /api/quiz/:quizId/leaderboard
