@@ -8,30 +8,43 @@ app.use(express.json());
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'https://quiz-app-git-main-mayank7n.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
+
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ MongoDB Connected Successfully');
-  })
-  .catch((err) => {
+  } catch (err) {
     console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  });
+  }
+};
+
+// Connect to MongoDB
+connectDB();
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/quiz", require("./routes/quizRoutes")); 
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api", require("./routes/statsRoutes"));
-app.get("/", (req, res) => {
-  res.send({
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
     activeStatus: true,
-    message: "Server is active"
+    message: "Server is active and running"
   });
 });
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// For Vercel serverless functions
+module.exports = app;
